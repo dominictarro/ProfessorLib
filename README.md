@@ -62,10 +62,20 @@ you should inherit from `EditableBase`. It does not take
 - `_edit_type(self, new: type, *args, **kwargs) -> bool`
   - *Converts the object to the type `new` and initializes with `*args`, `**kwargs`. Then updates the object with all attributes not found in `no_carryover`. If successful, returns `True`.*
   - e.g. converting a `MultipleChoice` question type to `FreeResponse`
+- `_edit_arbitrary(self, attr: str, x: Any, *args, **kwargs) -> bool`
+  - *An overridable method for editing an attribute type not specified.*
+
+Note that integrations wrap all functions with the following patterns:
+  - \_edit_
+  - \_add_
+  - \_clear_
+  - \_delete_
+
+If you want to specify a new editing function, use one of those patterns or override `_edit_arbitrary`.
 
 ```python
 from professor.core import EditableMixin
-
+from pathlib import Path
 
 class NewBase(EditableMixin):
   def __init__(self, *args, **kwargs):
@@ -73,6 +83,10 @@ class NewBase(EditableMixin):
     self.category: list = []
     if "category" in kwargs:
       self.category = kwargs["category"]
+    
+    self.html_path: Path = Path.cwd()
+    if "html_path" in kwargs:
+      self.html_path = kwargs["html_path"]
   
   def add_category(self, x: str):
     return self._add_element(attr="category", x=x)
@@ -86,5 +100,19 @@ class NewBase(EditableMixin):
   def edit_type(self, cls: type):
     if issubclass(cls, NewBase):
       return self._edit_type(cls)
+
+  def _edit_path(self, attr: str, x: Path) -> bool:
+    try:
+      assert isinstance(x, Path)
+      setattr(self, attr, x)
+      return True
+    except AssertionError:
+      return False
+  
+  def clear_html_path(self):
+    return self._clear_attr(attr="html_path", default=Path.cwd())
+  
+  def edit_html_path(self, x: Path):
+    return self._edit_path(self, attr="html_path", x=x)
 
 ```
